@@ -1,32 +1,32 @@
 package com.microservices.mentoring.checkout.entity;
 
-//import javax.persistence.*;
+import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.StringJoiner;
 
-//@Entity
-//@Table(name = "checkout")
+@Entity
+@Table(name = "checkout")
 public class CheckoutEntity {
 
-//    @Id
-//    @GeneratedValue(strategy = GenerationType.AUTO)
-//    @Column(name = "id")
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
     private long id;
 
-//    @Column(name = "customer_email")
+    @Column(name = "customer_email")
     private String customerEmail;
 
-//    @Column(name = "calculated_price")
+    @Column(name = "calculated_price")
     private BigDecimal calculatedPrice;
 
-//    @Column(name = "final_price")
+    @Column(name = "final_price")
     private BigDecimal finalPrice;
 
-//    @Column(name = "promocode_discount")
+    @Column(name = "promocode_discount")
     private BigDecimal promocodeDiscount;
 
-//    @OneToMany(cascade = {CascadeType.ALL}, mappedBy = "checkoutEntity")
+    @OneToMany(cascade = {CascadeType.ALL}, mappedBy = "checkoutEntity")
     private List<PurchaseEntity> purchases;
 
     public long getId() {

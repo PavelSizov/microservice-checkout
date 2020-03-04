@@ -11,7 +11,6 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.StringJoiner;
 
 @RestController
 public class CheckoutController {
@@ -63,14 +62,17 @@ public class CheckoutController {
     }
 
     @PostMapping("/checkout")
-    public String checkout(@RequestParam String promocode, @RequestParam String email) throws Exception {
-        BigDecimal discount;
+    public String checkout(@RequestParam(required = false) String promocode,
+                           @RequestParam String email) throws Exception {
+        BigDecimal discount = BigDecimal.ZERO;
         boolean promoFail = false;
-        try {
-            discount = findDiscount(promocode);
-        } catch (RestClientException rce) {
-            discount = BigDecimal.ZERO;
-            promoFail = true;
+
+        if (promocode != null) {
+            try {
+                discount = findDiscount(promocode);
+            } catch (RestClientException rce) {
+                promoFail = true;
+            }
         }
 
         cart = populatePrices();
@@ -85,19 +87,6 @@ public class CheckoutController {
         return "Success";
     }
 
-    @GetMapping("/test/discount")
-    public String testConnect(@RequestParam String promocode) {
-        BigDecimal discount = restTemplate
-                .getForObject("http://" + discountHostname + "/promocode/{promocode}", BigDecimal.class, promocode);
-
-        return discount.toString();
-    }
-
-    @GetMapping("/test/values")
-    public String testValues() {
-        return new StringJoiner("\n").add(catalogHostname).add(mailerHostname).add(discountHostname).toString();
-
-    }
 
     private BigDecimal findDiscount(String promocode) throws Exception {
         BigDecimal discount = restTemplate
@@ -114,16 +103,30 @@ public class CheckoutController {
         String ids = cart.keySet().stream().reduce((s, s2) -> s + "," + s2)
                 .orElseThrow(() -> new Exception("Nothing to checkout"));
 
-        Map<String, BigDecimal> prices = restTemplate
-                .getForObject("http://" + catalogHostname + "/catalog/products/price?id={productIds}", Map.class, ids);
+        Map<String, BigDecimal> prices = getPrices(ids);
 
-        if (prices == null) {
-            throw new Exception("No prices found");
+        if (prices.size() != cart.size()) {
+            throw new Exception("Unknown products detected");
         }
 
         prices.forEach((id, price) -> cart.get(id).setPrice(price));
 
         return cart;
+    }
+
+    private Map<String, BigDecimal> getPrices(String productIds) throws Exception {
+        Map<String, Integer> prices = restTemplate
+                .getForObject("http://" + catalogHostname + "/catalog/products/price?id={productIds}", Map.class,
+                        productIds);
+
+        if (prices == null || prices.size() == 0) {
+            throw new Exception("No prices found");
+        }
+
+        Map<String, BigDecimal> pricesBD = new HashMap<>(prices.size());
+        prices.forEach((s, integer) -> pricesBD.put(s, BigDecimal.valueOf(integer)));
+
+        return pricesBD;
     }
 
     private void sendSuccessMail(String customerEmail) {

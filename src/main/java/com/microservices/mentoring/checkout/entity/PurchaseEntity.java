@@ -1,27 +1,27 @@
 package com.microservices.mentoring.checkout.entity;
 
-//import javax.persistence.*;
+import javax.persistence.*;
 
-//@Entity
-//@Table(name = "purchase")
+@Entity
+@Table(name = "purchase")
 public class PurchaseEntity {
 
-//    @Id
-//    @GeneratedValue(strategy = GenerationType.AUTO)
-//    @Column(name = "id")
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
     private long id;
 
-//    @Column(name = "product_id")
+    @Column(name = "product_id")
     private String productId;
 
-//    @Column(name = "quantity")
+    @Column(name = "quantity")
     private int quantity;
 
-//    @Column(name = "checkout_id")
-//    private long checkoutId;
+    @Column(name = "checkout_id", updatable = false, insertable = false)
+    private long checkoutId;
 
-//    @ManyToOne
-//    @JoinColumn(name = "checkout_id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "checkout_id", nullable = false)
     private CheckoutEntity checkoutEntity;
 
 /*    public long getCheckoutId() {

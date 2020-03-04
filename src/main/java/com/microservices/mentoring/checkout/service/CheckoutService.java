@@ -6,7 +6,7 @@ import com.microservices.mentoring.checkout.entity.PurchaseEntity;
 import com.microservices.mentoring.checkout.repository.CheckoutRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-//import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -16,9 +16,8 @@ import java.util.List;
 @Service
 public class CheckoutService {
 
-//    @Autowired
-    private CheckoutRepository checkoutRepository = new CheckoutRepository() {
-    };
+    @Autowired
+    private CheckoutRepository checkoutRepository;
 
     public void performCheckout(Collection<PurchaseDto> purchases, BigDecimal discount, String customerEmail) {
 
@@ -33,9 +32,9 @@ public class CheckoutService {
         saveCheckout(checkoutEntity);
     }
 
-    //@Transactional
+    @Transactional
     private void saveCheckout(CheckoutEntity checkoutEntity) {
-       // checkoutRepository.save(checkoutEntity);
+        checkoutRepository.save(checkoutEntity);
     }
 
     private List<PurchaseEntity> convertFromDto(Collection<PurchaseDto> purchases) {
