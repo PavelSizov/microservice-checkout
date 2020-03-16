@@ -2,8 +2,10 @@ package com.microservices.mentoring.checkout.controller;
 
 import com.microservices.mentoring.checkout.controller.dto.PurchaseDto;
 import com.microservices.mentoring.checkout.service.CheckoutService;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -87,7 +89,7 @@ public class CheckoutController {
         return "Success";
     }
 
-
+    @Retryable
     private BigDecimal findDiscount(String promocode) throws Exception {
         BigDecimal discount = restTemplate
                 .getForObject("http://" + discountHostname + "/promocode/{promocode}", BigDecimal.class, promocode);
@@ -109,12 +111,16 @@ public class CheckoutController {
             throw new Exception("Unknown products detected");
         }
 
-        prices.forEach((id, price) -> cart.get(id).setPrice(price));
+        prices.forEach(
+                (id, price) -> cart.get(id).setPrice(price.multiply(BigDecimal.valueOf(cart.get(id).getQuantity()))));
 
         return cart;
     }
 
+    @Retryable
     private Map<String, BigDecimal> getPrices(String productIds) throws Exception {
+
+        @SuppressWarnings("unchecked assignment")
         Map<String, Integer> prices = restTemplate
                 .getForObject("http://" + catalogHostname + "/catalog/products/price?id={productIds}", Map.class,
                         productIds);
