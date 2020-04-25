@@ -6,15 +6,17 @@ import com.microservices.mentoring.checkout.service.DiscountService;
 import com.microservices.mentoring.checkout.service.PriceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 @RestController
+@CrossOrigin
 public class CheckoutController {
 
     @Value("${mailer_hostname}")
@@ -34,24 +36,28 @@ public class CheckoutController {
 
     private Map<String, PurchaseDto> cart = new HashMap<>();
 
+
     @PostMapping("/cart")
-    public Map<String, PurchaseDto> addToCart(@RequestParam String productId, @RequestParam int quantity) {
+    public List<PurchaseDto> addToCart(@RequestParam String productId, @RequestParam int quantity) {
         if (null == cart.computeIfPresent(productId, (id, q) -> q.changeQuantity(quantity))) {
             cart.put(productId, new PurchaseDto(productId, quantity));
         }
 
-        return cart;
+        return convertToList(cart);
     }
 
     @GetMapping("/cart")
-    public Map<String, PurchaseDto> getCart() {
-        return cart;
+    public List<PurchaseDto> getCart() {
+        System.out.println("Get cart");
+        return convertToList(cart);
     }
 
     @DeleteMapping("/cart")
-    public Map<String, PurchaseDto> removeFromCart(@RequestParam String productId, @RequestParam int quantity) {
+    public List<PurchaseDto> removeFromCart(@RequestParam String productId, @RequestParam int quantity) {
+        System.out.println("Remove from cart");
+
         if (productId == null || !cart.containsKey(productId)) {
-            return cart;
+            return convertToList(cart);
         }
 
         PurchaseDto updatedPurchase = cart.computeIfPresent(productId, (id, q) -> q.changeQuantity(-quantity));
@@ -59,13 +65,15 @@ public class CheckoutController {
         if ((updatedPurchase != null ? updatedPurchase.getQuantity() : 0) <= 0) {
             cart.remove(productId);
         }
-        return cart;
+        return convertToList(cart);
 
     }
 
     @PostMapping("/checkout")
     public String checkout(@RequestParam(required = false) String promocode,
                            @RequestParam String email) throws Exception {
+        System.out.println("Checkout");
+
         DiscountService.DiscountValue discount = new DiscountService.DiscountValue(BigDecimal.ZERO, false);
 
         if (promocode != null) {
@@ -77,9 +85,11 @@ public class CheckoutController {
         cart = new HashMap<>();
 
         if (discount.isFailed()) {
+            System.out.println("Sending promo fail email");
             sendPromoFailMail(email);
             return "Completed with issues";
         }
+        System.out.println("Sending success email");
         sendSuccessMail(email);
         return "Success";
     }
@@ -89,7 +99,14 @@ public class CheckoutController {
         String ids = cart.keySet().stream().reduce((s, s2) -> s + "," + s2)
                 .orElseThrow(() -> new Exception("Nothing to checkout"));
 
-        Map<String, BigDecimal> prices = priceService.getPrices(ids);
+        Map<String, BigDecimal> prices;
+        try {
+            prices = priceService.getPrices(ids);
+        } catch (Exception e) {
+            System.out.println("Prices not found");
+            throw new Exception("Catalog not available");
+        }
+
 
         if (prices.size() != cart.size()) {
             throw new Exception("Unknown products detected");
@@ -102,20 +119,30 @@ public class CheckoutController {
     }
 
 
-
     private void sendSuccessMail(String customerEmail) {
         Map<String, String> args = new HashMap<>();
         args.put("address", customerEmail);
         args.put("emailType", "SUCCESS");
-        restTemplate.postForLocation("http://" + mailerHostname + "/notification", args);
+        sendEmail(args);
     }
 
     private void sendPromoFailMail(String customerEmail) {
         Map<String, String> args = new HashMap<>();
         args.put("address", customerEmail);
         args.put("emailType", "PROMOCODE_FAILURE");
-        restTemplate.postForLocation("http://" + mailerHostname + "/notification", args);
+        sendEmail(args);
     }
 
+    private void sendEmail(Map<String, String> args) {
+        try {
+            restTemplate.postForLocation("http://" + mailerHostname + "/notification", args);
+        } catch (Exception e) {
+            System.out.println("Cannot send an email: " + e.getMessage());
+        }
+    }
+
+    private List<PurchaseDto> convertToList(Map<String, PurchaseDto> cart) {
+        return new LinkedList<>(cart.values());
+    }
 
 }

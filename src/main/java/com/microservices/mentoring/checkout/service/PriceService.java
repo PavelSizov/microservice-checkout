@@ -20,7 +20,7 @@ public class PriceService {
 
     @CircuitBreaker(maxAttempts = 3, openTimeout = 15000L, resetTimeout = 30000L)
     public Map<String, BigDecimal> getPrices(String productIds) throws Exception {
-
+        System.out.println("Getting current prices");
         @SuppressWarnings("unchecked assignment")
         Map<String, Integer> prices = restTemplate
                 .getForObject("http://" + catalogHostname + "/catalog/products/price?id={productIds}", Map.class,

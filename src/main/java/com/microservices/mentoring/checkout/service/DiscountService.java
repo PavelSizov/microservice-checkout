@@ -20,6 +20,7 @@ public class DiscountService {
 
     @CircuitBreaker(maxAttempts = 3, openTimeout = 15000L, resetTimeout = 30000L)
     public DiscountValue findDiscount(String promocode) throws Exception {
+        System.out.println("Getting discount");
         BigDecimal discount = restTemplate
                 .getForObject("http://" + discountHostname + "/promocode/{promocode}", BigDecimal.class, promocode);
 
